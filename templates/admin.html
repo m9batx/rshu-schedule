@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel{% endblock %}
+{% block content %}
+
+<div class="schedule-header">
+    <h2>🛠 Admin Panel</h2>
+    <a href="{{ url_for('admin_logout') }}" class="btn danger small">Logout</a>
+</div>
+
+<!-- ======= UPLOAD PDF ======= -->
+<div class="card green">
+    <h2>📤 Upload a new PDF</h2>
+    <p style="color: var(--muted); margin-top: 0;">
+        The group name is detected automatically from the file name.
+    </p>
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="pdf">PDF file</label>
+        <input type="file" name="pdf" id="pdf" accept=".pdf" required>
+        <br><br>
+        <button type="submit" class="btn green">Upload & Parse</button>
+    </form>
+</div>
+
+<!-- ======= SETTINGS ======= -->
+<div class="card">
+    <h2>⚙️ Schedule Settings</h2>
+    <p style="color: var(--muted); margin-top: 0;">
+        The <b>current year</b> is used as the reference point for age calculations.
+        Groups older than <b>max age</b> years will be flagged as old.
+    </p>
+    <form method="post" action="{{ url_for('admin_save_settings') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:flex; gap: 20px; flex-wrap: wrap;">
+            <div style="flex:1; min-width: 220px;">
+                <label for="current_year">Current year (2-digit)</label>
+                <input type="text" id="current_year" name="current_year" value="{{ settings.current_year }}"
+                    maxlength="2" pattern="\d{2}" required>
+            </div>
+            <div style="flex:1; min-width: 220px;">
+                <label for="max_age_years">Delete older than (years)</label>
+                <input type="text" id
