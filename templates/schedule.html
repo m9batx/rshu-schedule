@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ group }} – Timetable{% endblock %}
+{% block content %}
+
+<div class="schedule-header">
+    <h2>Weekly Timetable</h2>
+    <span class="group-pill">{{ group }}</span>
+    <a href="{{ url_for('forget') }}" class="btn ghost small">↩ Change group</a>
+</div>
+
+<div class="timetable-wrap">
+    <table class="timetable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                {% for d in days %}
+                <th>{{ d.capitalize() }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if not times %}
+            <tr>
+                <td colspan="7" class="empty-day">No scheduled time slots.</td>
+            </tr>
+            {% endif %}
+            {% for time in times %}
+            <tr>
+                <td class="time-cell">{{ time }}</td>
+                {% for d in days %}
+                {% set day_data = data.get(d, {}) %}
+                {% set slot = day_data.get('time_slots', {}).get(time) %}
+                <td>
+                    {% if day_data.get('note') %}
+                    <div class="note-day">{{ day_data['note'] }}</div>
+                    {% elif slot and slot.classes %}
+                    {% for c in slot.classes %}
+                    <div class="class-item">
+                        <div class="discipline">
+                            {{ c.discipline }}
+                            <span class="type">{{ c.type }}</span>
+                        </div>
+                        {% if c.instructor %}
+                        <div class="meta">👤 {{ c.instructor }}</div>
+                        {% endif %}
+                        {% if c.location %}
+                        <div class="meta">📍 {{ c.location }}</div>
+                        {% endif %}
+                        {% if c.dates %}
+                        <div class="dates">📅 {{ c.dates|join(', ') }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-day">—</div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

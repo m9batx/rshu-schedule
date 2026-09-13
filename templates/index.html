@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Choose your group{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>🎓 Choose your group</h2>
+    <p style="color: var(--muted); margin-top: 0;">
+        Pick your group below. Optionally check <b>"Remember my choice"</b> so next time you'll see your timetable right
+        away.
+    </p>
+
+    <form method="get" action="{{ url_for('schedule') }}" id="groupForm">
+        <div class="group-grid">
+            {% for g in groups %}
+            <a href="#" class="group-btn" data-group="{{ g }}" onclick="pickGroup(event, '{{ g }}')">
+                {{ g }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <input type="hidden" name="group" id="selectedGroup">
+        <input type="hidden" name="remember" id="rememberFlag" value="0">
+
+        <div class="checkbox-row">
+            <input type="checkbox" id="remember"
+                onchange="document.getElementById('rememberFlag').value = this.checked ? '1' : '0'">
+            <label for="remember" style="margin: 0;">Remember my choice (auto‑open my timetable next time)</label>
+        </div>
+
+        {% if not groups %}
+        <div class="alert error">No schedules uploaded yet. Please ask the admin.</div>
+        {% endif %}
+    </form>
+</div>
+
+<script>
+    function pickGroup(e, g) {
+        e.preventDefault();
+        document.getElementById('selectedGroup').value = g;
+        document.getElementById('groupForm').submit();
+    }
+</script>
+
+{% endblock %}
