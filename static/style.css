@@ -1,0 +1,304 @@
+:root {
+    --white: #ffffff;
+    --blue:  #1e6fd9;
+    --blue-dark: #1553a4;
+    --blue-soft: #e8f1ff;
+    --green: #27ae60;
+    --green-dark: #1e874b;
+    --green-soft: #e6f7ee;
+    --text: #1a2b45;
+    --muted: #6b7b90;
+    --border: #d7e2f0;
+    --shadow: 0 4px 16px rgba(30, 111, 217, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--blue-soft) 0%, var(--white) 50%, var(--green-soft) 100%);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+/* ---------- Container ---------- */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+    background: var(--white);
+    box-shadow: var(--shadow);
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid var(--green);
+}
+.topbar h1 {
+    margin: 0;
+    font-size: 22px;
+    color: var(--blue);
+    letter-spacing: 0.4px;
+}
+.topbar .badge {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ---------- Cards ---------- */
+.card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 28px 32px;
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+    border-top: 4px solid var(--blue);
+}
+.card h2 {
+    margin: 0 0 16px;
+    color: var(--blue);
+    font-size: 20px;
+}
+.card.green { border-top-color: var(--green); }
+.card.green h2 { color: var(--green-dark); }
+
+/* ---------- Group picker ---------- */
+.group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+.group-btn {
+    display: block;
+    text-align: center;
+    padding: 16px 12px;
+    background: var(--white);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--blue-dark);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.18s ease;
+}
+.group-btn:hover {
+    border-color: var(--green);
+    background: var(--green-soft);
+    color: var(--green-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.18);
+}
+
+/* ---------- Forms ---------- */
+label {
+    display: block;
+    font-weight: 600;
+    color: var(--blue-dark);
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+input[type="text"], input[type="password"], input[type="file"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.18s ease;
+    background: var(--white);
+}
+input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15);
+}
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0;
+    color: var(--muted);
+    font-size: 14px;
+}
+.checkbox-row input { width: auto; }
+
+/* ---------- Buttons ---------- */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    background: var(--blue);
+    color: var(--white);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.18s ease;
+}
+.btn:hover {
+    background: var(--blue-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(30, 111, 217, 0.25);
+}
+.btn.green { background: var(--green); }
+.btn.green:hover { background: var(--green-dark); box-shadow: 0 6px 16px rgba(39,174,96,0.25); }
+.btn.ghost {
+    background: transparent;
+    color: var(--blue);
+    border: 2px solid var(--blue);
+}
+.btn.ghost:hover { background: var(--blue-soft); }
+.btn.danger {
+    background: #e74c3c;
+}
+.btn.danger:hover { background: #c0392b; }
+.btn.small { padding: 8px 14px; font-size: 13px; }
+
+/* ---------- Alerts ---------- */
+.alert {
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    font-weight: 500;
+}
+.alert.success { background: var(--green-soft); color: var(--green-dark); border-left: 4px solid var(--green); }
+.alert.error   { background: #fdecea; color: #b71c1c; border-left: 4px solid #e74c3c; }
+
+/* ---------- Timetable ---------- */
+.timetable-wrap {
+    overflow-x: auto;
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 8px;
+}
+table.timetable {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    min-width: 1200px;
+    font-size: 14px;
+}
+table.timetable th {
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    color: var(--white);
+    padding: 14px 10px;
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+table.timetable th:first-child {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+    border-top-left-radius: 12px;
+}
+table.timetable th:last-child { border-top-right-radius: 12px; }
+
+table.timetable td {
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 12px 10px;
+    vertical-align: top;
+    background: var(--white);
+}
+table.timetable td.time-cell {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    border-right: 2px solid var(--green);
+    min-width: 120px;
+}
+table.timetable tr:hover td { background: var(--blue-soft); }
+table.timetable tr:hover td.time-cell { background: var(--green-soft); }
+
+/* class card inside cell */
+.class-item {
+    background: var(--blue-soft);
+    border-left: 4px solid var(--blue);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+}
+.class-item:last-child { margin-bottom: 0; }
+.class-item .discipline {
+    font-weight: 700;
+    color: var(--blue-dark);
+    margin-bottom: 4px;
+}
+.class-item .type {
+    display: inline-block;
+    background: var(--green);
+    color: var(--white);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.class-item .meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+.class-item .dates {
+    font-size: 11px;
+    color: var(--green-dark);
+    margin-top: 6px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+.empty-day {
+    color: var(--muted);
+    font-style: italic;
+    text-align: center;
+    font-size: 12px;
+}
+.note-day {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    font-weight: 600;
+    text-align: center;
+    padding: 24px 8px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+/* ---------- Schedule header ---------- */
+.schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.schedule-header h2 {
+    margin: 0;
+    color: var(--blue);
+    font-size: 26px;
+}
+.schedule-header .group-pill {
+    background: var(--green);
+    color: var(--white);
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 18px;
+}
+</style>
