@@ -4,6 +4,7 @@
 
 <div class="schedule-header">
     <h2>🛠 Admin Panel</h2>
+    <span class="badge-text">signed in as <b>{{ admin_user }}</b></span>
     <a href="{{ url_for('admin_logout') }}" class="btn danger small">Logout</a>
 </div>
 
@@ -18,8 +19,74 @@
         <label for="pdf">PDF file</label>
         <input type="file" name="pdf" id="pdf" accept=".pdf" required>
         <br><br>
-        <button type="submit" class="btn green">Upload & Parse</button>
+        <button type="submit" class="btn green">Upload &amp; Parse</button>
     </form>
+</div>
+
+<!-- ======= ICS EXPORT ======= -->
+<div class="card">
+    <h2>📅 Export group to calendar (.ics)</h2>
+    <p style="color: var(--muted); margin-top: 0;">
+        Pick a group and download an <b>.ics</b> file — one event per lesson date,
+        ready to import or subscribe to in Google&nbsp;Calendar, Outlook or Apple&nbsp;Calendar.
+        Classes listed in “Classes without dates” are skipped, since they have no date to place.
+    </p>
+    {% if groups %}
+    <form method="get" action="{{ url_for('admin_export_ics') }}" class="ics-export-form">
+        <div class="ics-export-row">
+            <select name="group" id="ics-group" required>
+                <option value="">— select a group —</option>
+                {% for g in groups %}
+                <option value="{{ g }}">{{ g }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn">⬇ Download .ics</button>
+        </div>
+    </form>
+    {% else %}
+    <p style="color: var(--muted); font-style: italic;">No groups uploaded yet.</p>
+    {% endif %}
+</div>
+
+<!-- ======= GROUPS ======= -->
+<div class="card">
+    <h2>📚 Groups ({{ group_rows|length }})</h2>
+    <div class="groups-table-wrap">
+        <table class="groups-table">
+            <thead>
+                <tr>
+                    <th>Group</th>
+                    <th class="num">Classes</th>
+                    <th class="num">With dates</th>
+                    <th>Schedule</th>
+                    <th>Calendar</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in group_rows %}
+                <tr>
+                    <td class="g-name">{{ row.name }}</td>
+                    <td class="num">{{ row.classes }}</td>
+                    <td class="num">{{ row.dated }}</td>
+                    <td>
+                        <a href="{{ url_for('schedule', group=row.name) }}" class="btn ghost small">View</a>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('ics_export', group=row.name) }}" class="btn small">⬇ .ics</a>
+                    </td>
+                    <td>
+                        <form method="post" action="{{ url_for('admin_delete', group=row.name) }}"
+                              onsubmit="return confirm('Delete {{ row.name }} and all its classes?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn danger small">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- ======= SETTINGS ======= -->
@@ -39,4 +106,35 @@
             </div>
             <div style="flex:1; min-width: 220px;">
                 <label for="max_age_years">Delete older than (years)</label>
-                <input type="text" id
+                <input type="text" id="max_age_years" name="max_age_years" value="{{ settings.max_age_years }}"
+                    maxlength="2" pattern="\d{2}" required>
+            </div>
+        </div>
+        <br>
+        <button type="submit" class="btn">Save settings</button>
+    </form>
+</div>
+
+<!-- ======= CLEANUP ======= -->
+<div class="card">
+    <h2>🧹 Cleanup</h2>
+    <div style="display:flex; gap: 24px; flex-wrap: wrap;">
+        <form method="post" action="{{ url_for('admin_cleanup_by_age') }}"
+              onsubmit="return confirm('Delete every group older than max_age_years?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Delete groups older than <b>{{ settings.max_age_years }}</b> years
+                (relative to {{ settings.current_year }})</label>
+            <button type="submit" class="btn danger">Delete by age</button>
+        </form>
+        <form method="post" action="{{ url_for('admin_cleanup_by_year') }}"
+              onsubmit="return confirm('Delete every group of the given year?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="target_year">Delete groups by year (2-digit)</label>
+            <input type="text" id="target_year" name="target_year" maxlength="2" pattern="\d{2}"
+                   placeholder="e.g. 22" style="max-width:140px;">
+            <button type="submit" class="btn danger" style="margin-top:8px;">Delete by year</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

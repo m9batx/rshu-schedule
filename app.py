@@ -4,6 +4,9 @@ import sqlite3
 import secrets
 import logging
 import re
+import hashlib
+from urllib.parse import quote
+from datetime import datetime, timedelta
 from functools import wraps
 
 import bcrypt
@@ -18,7 +21,7 @@ from werkzeug.utils import secure_filename
 
 from extractor import (
     extract_group, extract_schedule,
-    group_year, is_older_than,
+    group_year, is_older_than, _expand_dates,
 )
 
 # ==================== CONFIG ====================
@@ -40,6 +43,10 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=False,     # True in production w/ HTTPS
     WTF_CSRF_TIME_LIMIT=None,
+    # always serve the files on disk: template/CSS edits show up without
+    # restarting the server (debug=False caches templates by default)
+    TEMPLATES_AUTO_RELOAD=True,
+    SEND_FILE_MAX_AGE_DEFAULT=0,
 )
 
 csrf = CSRFProtect(app)
@@ -92,6 +99,24 @@ def init_db():
                 value TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS classes (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_name      TEXT NOT NULL,
+                day             TEXT NOT NULL,
+                time_slot       TEXT NOT NULL,
+                break           TEXT NOT NULL DEFAULT '',
+                discipline      TEXT NOT NULL DEFAULT '',
+                type            TEXT NOT NULL DEFAULT '',
+                instructor      TEXT NOT NULL DEFAULT '',
+                instructor_key  TEXT NOT NULL DEFAULT '',
+                location        TEXT NOT NULL DEFAULT '',
+                dates           TEXT NOT NULL DEFAULT '[]'
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_instructor ON classes(instructor_key)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_group ON classes(group_name)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_day ON classes(day)")
         # Default settings if missing
         defaults = {
             "current_year": "26",     # reference year (2-digit)
@@ -106,6 +131,44 @@ def init_db():
 
 
 # -------- schedules --------
+CLASS_COLUMNS = (
+    "group_name", "day", "time_slot", "break",
+    "discipline", "type", "instructor", "instructor_key",
+    "location", "dates",
+)
+
+
+def flatten_classes(group_name: str, schedule: dict) -> list:
+    """Flatten a group's schedule dict into one row per class."""
+    rows = []
+    for day, day_data in (schedule or {}).items():
+        for ts, slot in day_data.get("time_slots", {}).items():
+            for cls in slot.get("classes", []):
+                instructor = cls.get("instructor", "")
+                rows.append((
+                    group_name, day, ts,
+                    slot.get("break", ""),
+                    cls.get("discipline", ""),
+                    cls.get("type", ""),
+                    instructor,
+                    instructor.lower().strip(),
+                    cls.get("location", ""),
+                    json.dumps(cls.get("dates", []), ensure_ascii=False),
+                ))
+    return rows
+
+
+def rebuild_classes(conn, group_name: str, schedule: dict):
+    conn.execute("DELETE FROM classes WHERE group_name = ?", (group_name,))
+    rows = flatten_classes(group_name, schedule)
+    if rows:
+        conn.executemany(
+            f"INSERT INTO classes ({', '.join(CLASS_COLUMNS)}) "
+            f"VALUES ({', '.join('?' * len(CLASS_COLUMNS))})",
+            rows
+        )
+
+
 def save_schedule(group_name: str, schedule: dict, pdf_name: str = ""):
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
@@ -113,6 +176,7 @@ def save_schedule(group_name: str, schedule: dict, pdf_name: str = ""):
             "VALUES (?, ?, ?)",
             (group_name, json.dumps(schedule, ensure_ascii=False), pdf_name)
         )
+        rebuild_classes(conn, group_name, schedule)
         conn.commit()
 
 
@@ -133,10 +197,76 @@ def list_groups():
     return [r[0] for r in rows]
 
 
+def list_groups_with_counts() -> list:
+    """Every group with how many class rows it holds (and how many are dated)."""
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute(
+            "SELECT s.group_name, COUNT(c.id), "
+            "SUM(CASE WHEN c.dates IS NULL OR c.dates = '[]' THEN 0 ELSE 1 END) "
+            "FROM schedules s LEFT JOIN classes c ON c.group_name = s.group_name "
+            "GROUP BY s.group_name ORDER BY s.group_name"
+        ).fetchall()
+    return [{"name": r[0], "classes": r[1] or 0, "dated": r[2] or 0} for r in rows]
+
+
+def list_instructors() -> list:
+    """Distinct instructor names for the dropdown list.
+
+    A single class can list several teachers joined with '; ' — split them
+    so each appears separately in the dropdown.
+    """
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT instructor FROM classes "
+            "WHERE instructor != ''"
+        ).fetchall()
+    names = []
+    for (row,) in rows:
+        for name in row.split(";"):
+            name = name.strip()
+            if name and name not in names:
+                names.append(name)
+    return sorted(names)
+
+
 def delete_group(group_name: str):
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("DELETE FROM schedules WHERE group_name = ?", (group_name,))
+        conn.execute("DELETE FROM classes WHERE group_name = ?", (group_name,))
         conn.commit()
+
+
+# -------- instructor search --------
+DAY_ORDER = [
+    "monday", "tuesday", "wednesday",
+    "thursday", "friday", "saturday",
+]
+DAY_LABELS = {
+    "monday": "Понедельник", "tuesday": "Вторник",
+    "wednesday": "Среда", "thursday": "Четверг",
+    "friday": "Пятница", "saturday": "Суббота",
+}
+
+
+def search_classes(term: str) -> list:
+    """Return every class whose instructor matches `term` (case-insensitive)."""
+    term = (term or "").strip()
+    if not term:
+        return []
+    like = f"%{term.lower()}%"
+    day_case = "CASE day " + " ".join(
+        f"WHEN '{d}' THEN {i}" for i, d in enumerate(DAY_ORDER)
+    ) + " END"
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT group_name, day, time_slot, break, discipline, type, "
+            "instructor, location, dates FROM classes "
+            "WHERE instructor_key LIKE ? "
+            f"ORDER BY {day_case}, group_name, time_slot",
+            (like,)
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 # -------- settings --------
@@ -183,6 +313,263 @@ def is_valid_group(g: str) -> bool:
     return bool(g and GROUP_RE.match(g))
 
 
+# ==================== DAY-BY-DAY CALENDAR ====================
+DATE_TOKEN_ANY = re.compile(r'\d{2}\.\d{2}\.\d{2,4}')
+WEEK_DAY_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+
+
+def _try_parse_date(value: str):
+    value = value.strip()
+    for fmt in ("%d.%m.%Y", "%d.%m.%y"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            pass
+    for token in DATE_TOKEN_ANY.findall(value):
+        # Skip tokens glued into a longer number (e.g. '02.12.11.2026'
+        # would salvage a fake '02.12.11' — the trailing '.' gives it away).
+        idx = value.find(token)
+        if idx >= 0 and idx + len(token) < len(value) and value[idx + len(token)] == ".":
+            continue
+        for fmt in ("%d.%m.%Y", "%d.%m.%y"):
+            try:
+                return datetime.strptime(token, fmt)
+            except ValueError:
+                pass
+    return None
+
+
+def build_calendar(data: dict) -> dict:
+    """
+    Expand a stored schedule into a day-by-day calendar.
+    Returns:
+        dates  – sorted list of every day that has at least one class ("dd.mm.yy")
+        times  – sorted union of all time slots
+        cells  – {date: {time: [class, ...]}}
+        notes  – [(weekday, note)] for free days (e.g. самостоятельная работа)
+        orphans– classes that carry no dates (kept so nothing is lost)
+    """
+    DAYS_EN = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+    WEEKDAY_MAP = {
+        "monday": 0, "tuesday": 1, "wednesday": 2,
+        "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6,
+    }
+
+    dates = set()
+    times = set()
+    breaks = {}
+    cells = {}
+    notes = []
+    orphans = []
+
+    for day_en in DAYS_EN:
+        day_info = data.get(day_en, {}) or {}
+        if day_info.get("note"):
+            notes.append((day_en, day_info["note"]))
+
+        weekday = WEEKDAY_MAP[day_en]
+        for t, slot in (day_info.get("time_slots") or {}).items():
+            times.add(t)
+            if slot.get("break"):
+                breaks[t] = slot.get("break")
+            for c in slot.get("classes") or []:
+                raw_dates = c.get("dates") or []
+                if not raw_dates:
+                    orphans.append((day_en, t, c))
+                    continue
+                for raw in raw_dates:
+                    for dts in _expand_dates([raw], weekday):
+                        dt = _try_parse_date(dts)
+                        if dt is None:
+                            continue
+                        key = dt.strftime("%d.%m.%y")
+                        dates.add(key)
+                        cell = cells.setdefault(key, {})
+                        cell.setdefault(t, []).append(c)
+
+    dates_sorted = sorted(
+        dates, key=lambda s: datetime.strptime(s, "%d.%m.%y")
+    )
+    times_sorted = sorted(times, key=lambda x: x.split("-")[0])
+
+    return {
+        "dates": dates_sorted,
+        "times": times_sorted,
+        "cells": cells,
+        "breaks": breaks,
+        "notes": notes,
+        "orphans": orphans,
+    }
+
+
+def build_week_grid(cells: dict, today_str: str = None) -> list:
+    """
+    Compose the schedule as a wall calendar: rows are weeks, columns are
+    Пн..Вс, and every day inside the covered range is shown (empty weeks
+    and days without classes stay empty).
+
+    Weeks span from the Monday of the week containing the first date
+    through the Sunday of the week containing the last date.
+    """
+    if not cells:
+        return []
+    all_days = sorted(cells, key=lambda s: datetime.strptime(s, "%d.%m.%y"))
+    first = datetime.strptime(all_days[0], "%d.%m.%y")
+    last = datetime.strptime(all_days[-1], "%d.%m.%y")
+    start = first - timedelta(days=first.weekday())
+    end = last + timedelta(days=6 - last.weekday())
+    today_str = today_str or datetime.now().strftime("%d.%m.%y")
+
+    weeks = []
+    cursor = start
+    while cursor <= end:
+        days = []
+        for off in range(7):
+            cur = cursor + timedelta(days=off)
+            dts = cur.strftime("%d.%m.%y")
+            days.append({
+                "date": dts,
+                "show": cur.strftime("%d.%m"),
+                "today": dts == today_str,
+                "classes": cells.get(dts, {}),
+            })
+        weeks.append({
+            "label": f"{cursor.strftime('%d.%m')} — {(cursor + timedelta(days=6)).strftime('%d.%m')}",
+            "days": days,
+        })
+        cursor += timedelta(days=7)
+    return weeks
+
+
+# ==================== ICS EXPORT ====================
+# Every class row in `classes` becomes one VEVENT per date it holds, so a
+# single group can be subscribed to / imported into any calendar app.
+_TIME_SLOT_RE = re.compile(r'(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})')
+
+
+def get_group_classes(group_name: str) -> list:
+    """All stored class rows of one group, ordered for stable output."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT id, day, time_slot, break, discipline, type, instructor, "
+            "location, dates FROM classes WHERE group_name = ? "
+            "ORDER BY day, time_slot, discipline",
+            (group_name,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _slot_to_ics_times(time_slot: str):
+    """'09.00-10.35' -> ('090000', '103500'); None when unparsable."""
+    m = _TIME_SLOT_RE.search(time_slot or '')
+    if not m:
+        return None
+    h1, m1, h2, m2 = (int(g) for g in m.groups())
+    if not (0 <= h1 < 24 and 0 <= h2 < 24 and 0 <= m1 < 60 and 0 <= m2 < 60):
+        return None
+    return f"{h1:02d}{m1:02d}00", f"{h2:02d}{m2:02d}00"
+
+
+def _ics_escape(text: str) -> str:
+    """Escape a value for an iCalendar TEXT property (RFC 5545 §3.3.11)."""
+    out = (text or "").replace("\\", "\\\\")
+    out = out.replace(";", "\\;").replace(",", "\\,")
+    out = out.replace("\r\n", "\n").replace("\r", "\n")
+    return out.replace("\n", "\\n")
+
+
+def _ics_fold(line: str, limit: int = 73) -> str:
+    """Fold a content line to <=75 octets, never splitting a character."""
+    chunks, buf, size = [], [], 0
+    for ch in line:
+        width = len(ch.encode("utf-8"))
+        if size + width > limit and buf:
+            chunks.append("".join(buf))
+            buf, size = [], 0
+        buf.append(ch)
+        size += width
+    chunks.append("".join(buf))
+    return "\r\n ".join(chunks)
+
+
+def build_ics(group_name: str) -> str:
+    """Render one group's timetable as an RFC 5545 calendar."""
+    stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "PRODID:-//GGMU Timetable//Schedule Export//RU",
+        f"X-WR-CALNAME:Расписание {group_name}",
+    ]
+
+    seen = set()
+    for row in get_group_classes(group_name):
+        times = _slot_to_ics_times(row["time_slot"])
+        if not times:
+            continue
+        try:
+            dates = json.loads(row["dates"] or "[]")
+        except (TypeError, ValueError):
+            dates = []
+
+        summary = row["discipline"] or row["type"] or "Занятие"
+        if row["type"]:
+            summary = f"{summary} ({row['type']})"
+
+        for raw_date in dates:
+            dt = _try_parse_date(raw_date)
+            if dt is None:
+                continue
+            date_key = dt.strftime("%Y%m%d")
+            # merged PDF cells can store the very same class twice
+            key = (date_key, times, summary, row["instructor"],
+                   row["location"])
+            if key in seen:
+                continue
+            seen.add(key)
+
+            description = []
+            if row["instructor"]:
+                description.append(row["instructor"])
+            if row["break"]:
+                description.append(f"Перерыв {row['break']}")
+            description.append(f"Группа: {group_name}")
+
+            lines += [
+                "BEGIN:VEVENT",
+                f"UID:{_ics_uid(row['id'], date_key, times, summary)}",
+                f"DTSTAMP:{stamp}",
+                f"DTSTART:{date_key}T{times[0]}",
+                f"DTEND:{date_key}T{times[1]}",
+                f"SUMMARY:{_ics_escape(summary)}",
+                f"DESCRIPTION:{_ics_escape(chr(10).join(description))}",
+            ]
+            if row["location"]:
+                lines.append(f"LOCATION:{_ics_escape(row['location'])}")
+            lines.append("END:VEVENT")
+
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(_ics_fold(l) for l in lines) + "\r\n"
+
+
+def _ics_domain() -> str:
+    """Host name used to build globally unique event UIDs."""
+    try:
+        return request.host.split(":")[0] or "localhost"
+    except RuntimeError:          # outside a request context (CLI/scripts)
+        return "localhost"
+
+
+def _ics_uid(row_id, date_key: str, times, summary: str) -> str:
+    """Stable UID: same class + date always produces the same identifier."""
+    seed = f"{row_id}|{date_key}|{times[0]}|{summary}"
+    digest = hashlib.md5(seed.encode("utf-8")).hexdigest()[:16]
+    return f"{date_key}-{digest}@{_ics_domain()}"
+
+
 # ==================== PUBLIC ROUTES ====================
 @app.route("/")
 def index():
@@ -190,7 +577,11 @@ def index():
     saved_group = request.cookies.get("group")
     if saved_group and is_valid_group(saved_group) and saved_group in groups:
         return redirect(url_for("schedule", group=saved_group))
-    return render_template("index.html", groups=groups)
+    return render_template(
+        "index.html",
+        groups=groups,
+        instructors=list_instructors(),
+    )
 
 
 @app.route("/schedule")
@@ -207,16 +598,45 @@ def schedule():
         flash("Schedule not found.", "error")
         return redirect(url_for("index"))
 
-    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
-    all_times = set()
-    for d in days:
-        for t in data.get(d, {}).get("time_slots", {}).keys():
-            all_times.add(t)
-    all_times = sorted(all_times, key=lambda x: x.split('-')[0])
+    cal = build_calendar(data)
+    today_str = datetime.now().strftime("%d.%m.%y")
+    weeks = build_week_grid(cal["cells"], today_str)
+
+    # "semester" = one single table: day columns (short name + date) for every week,
+    # grouped 7 per week; "grid"/"transpose" are legacy layouts kept for old links
+    # but the page itself always shows the single table.
+    view = "semester"
+    try:
+        per_row = int(request.args.get("per", 0))
+    except (TypeError, ValueError):
+        per_row = 0
+    per_row = 0 if per_row <= 0 else min(4, per_row)
+
+    for i, w in enumerate(weeks):
+        w["num"] = i + 1
+        w["is_current"] = any(d["today"] for d in w["days"])
+    week_rows = ([weeks] if per_row == 0
+                 else [weeks[i:i + per_row] for i in range(0, len(weeks), per_row)])
+    strip = (per_row == 0)
+    sem_cols = [{"band": w, "day": d} for w in weeks for d in w["days"]]
+    day_rows = [
+        {"name": name, "idx": i, "cells": [w["days"][i] for w in weeks]}
+        for i, name in enumerate(WEEK_DAY_RU)
+    ]
 
     resp = make_response(render_template(
         "schedule.html",
-        group=group, data=data, days=days, times=all_times
+        group=group,
+        cal=cal,
+        weeks=weeks,
+        week_rows=week_rows,
+        strip=strip,
+        sem_cols=sem_cols,
+        day_rows=day_rows,
+        view=view,
+        per_row=per_row,
+        week_day_names=WEEK_DAY_RU,
+        day_labels=DAY_LABELS,
     ))
 
     if remember:
@@ -227,11 +647,51 @@ def schedule():
     return resp
 
 
+@app.route("/admin/export-ics")
+@admin_required
+def admin_export_ics():
+    """Admin picks a group in the panel form; forward to the .ics download."""
+    group = (request.args.get("group") or "").strip()
+    if not is_valid_group(group) or group not in list_groups():
+        flash("Pick a valid group to export.", "error")
+        return redirect(url_for("admin_panel"))
+    return redirect(url_for("ics_export", group=group))
+
+
+@app.route("/ics/<group>")
+@admin_required
+def ics_export(group: str):
+    """Download one group's timetable as a calendar file (.ics)."""
+    group = (group or "").strip()
+    if not is_valid_group(group) or group not in list_groups():
+        abort(404)
+    body = build_ics(group)
+    resp = make_response(body)
+    resp.headers["Content-Type"] = "text/calendar; charset=utf-8"
+    # group names are Cyrillic: ASCII fallback + RFC 5987 for the real name
+    ascii_name = re.sub(r'[^A-Za-z0-9\-]+', '-', group).strip('-') or "group"
+    resp.headers["Content-Disposition"] = (
+        f'attachment; filename="schedule-{ascii_name}.ics"; '
+        f"filename*=UTF-8''{quote(f'schedule-{group}.ics')}"
+    )
+    return resp
+
+
 @app.route("/forget")
 def forget():
     resp = make_response(redirect(url_for("index")))
     resp.delete_cookie("group")
     return resp
+
+
+@app.route("/instructor")
+def instructor_search():
+    q = request.args.get("q", "").strip()
+    results = search_classes(q) if q else []
+    return render_template(
+        "instructor.html",
+        q=q, results=results, day_labels=DAY_LABELS,
+    )
 
 
 # ==================== ADMIN LOGIN ====================
@@ -308,6 +768,7 @@ def admin_panel():
     return render_template(
         "admin.html",
         groups=groups,
+        group_rows=list_groups_with_counts(),
         settings=settings,
         admin_user=ADMIN_USER,
     )
@@ -424,4 +885,6 @@ def ratelimit(e):
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    # use_reloader: .py edits restart the server automatically, so the browser
+    # never shows a mix of new templates with old route code
+    app.run(debug=False, host="0.0.0.0", port=5000, use_reloader=True)

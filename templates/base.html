@@ -7,10 +7,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="topbar">
-        <h1>📚 University Timetable</h1>
-        <span class="badge">GGMU</span>
-    </div>
     <div class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, msg in messages %}

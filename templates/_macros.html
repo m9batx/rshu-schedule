@@ -1,0 +1,88 @@
+{% macro place(loc) %}
+{%- if not loc -%}
+{%- elif loc.startswith('http://') or loc.startswith('https://') or loc.startswith('www.') -%}
+<div class="meta">🔗 <a href="{{ loc }}" target="_blank" rel="noopener">{{ loc }}</a></div>
+{%- else -%}
+<div class="meta">📍 {{ loc }}</div>
+{%- endif -%}
+{% endmacro %}
+
+{% macro slot_classes(items, cal, time) %}
+<div class="class-block">
+    <div class="class-time">{{ time }}{% if cal.breaks.get(time) %}<span class="break">☕ {{ cal.breaks[time] }}</span>{% endif %}</div>
+    {% set ns = namespace(groups={}) %}
+    {% for c in items %}
+        {% if c.discipline not in ns.groups %}
+            {% set _ = ns.groups.update({c.discipline: []}) %}
+        {% endif %}
+        {% set _ = ns.groups[c.discipline].append(c) %}
+    {% endfor %}
+    {% for disp, group in ns.groups.items() %}
+        {% if group|length == 2 %}
+        <div class="subgroup-row">
+            {% for c in group %}
+            <div class="subgroup-col">
+                <div class="subgroup-label">{{ loop.index }} подгруппа</div>
+                <div class="class-item">
+                    <div class="discipline">{{ c.discipline }} <span class="type">{{ c.type }}</span></div>
+                    {% if c.instructor %}<div class="meta">👤 {{ c.instructor }}</div>{% endif %}
+                    {{ place(c.location) }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        {% for c in group %}
+        <div class="class-item">
+            <div class="discipline">{{ c.discipline }} <span class="type">{{ c.type }}</span></div>
+            {% if c.instructor %}<div class="meta">👤 {{ c.instructor }}</div>{% endif %}
+            {{ place(c.location) }}
+        </div>
+        {% endfor %}
+        {% endif %}
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro day_classes(d, cal) %}
+{% if d.classes %}
+    {% for time in cal.times if d.classes.get(time) %}
+    <div class="class-block">
+        <div class="class-time">{{ time }}{% if cal.breaks.get(time) %}<span class="break">☕ {{ cal.breaks[time] }}</span>{% endif %}</div>
+        {% set ns = namespace(groups={}) %}
+        {% for c in d.classes[time] %}
+            {% if c.discipline not in ns.groups %}
+                {% set _ = ns.groups.update({c.discipline: []}) %}
+            {% endif %}
+            {% set _ = ns.groups[c.discipline].append(c) %}
+        {% endfor %}
+        {% for disp, group in ns.groups.items() %}
+            {% if group|length == 2 %}
+            <div class="subgroup-row">
+                {% for c in group %}
+                <div class="subgroup-col">
+                    <div class="subgroup-label">{{ loop.index }} подгруппа</div>
+                    <div class="class-item">
+                        <div class="discipline">{{ c.discipline }} <span class="type">{{ c.type }}</span></div>
+                        {% if c.instructor %}<div class="meta">👤 {{ c.instructor }}</div>{% endif %}
+                        {{ place(c.location) }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            {% for c in group %}
+            <div class="class-item">
+                <div class="discipline">{{ c.discipline }} <span class="type">{{ c.type }}</span></div>
+                {% if c.instructor %}<div class="meta">👤 {{ c.instructor }}</div>{% endif %}
+                {{ place(c.location) }}
+            </div>
+            {% endfor %}
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+{% else %}
+<div class="empty-day">—</div>
+{% endif %}
+{% endmacro %}

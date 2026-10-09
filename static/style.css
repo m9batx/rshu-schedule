@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --white: #ffffff;
     --blue:  #1e6fd9;
     --blue-dark: #1553a4;
@@ -24,9 +24,10 @@ body {
 
 /* ---------- Container ---------- */
 .container {
-    max-width: 1400px;
+    width: 100%;
+    max-width: 2400px;
     margin: 0 auto;
-    padding: 32px 24px 64px;
+    padding: 24px 16px 56px;
 }
 
 /* ---------- Top bar ---------- */
@@ -182,12 +183,13 @@ input:focus {
     border-radius: 16px;
     box-shadow: var(--shadow);
     padding: 8px;
+    width: 100%;
 }
 table.timetable {
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
-    min-width: 1200px;
+    min-width: 1180px;
     font-size: 14px;
 }
 table.timetable th {
@@ -222,6 +224,33 @@ table.timetable td.time-cell {
     white-space: nowrap;
     border-right: 2px solid var(--green);
     min-width: 120px;
+}
+table.timetable td.time-cell .break {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+}
+.subgroup-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+.subgroup-row .subgroup-col {
+    flex: 1 1 0;
+    min-width: 0;
+    border: 1px dashed var(--border, #cdd6dc);
+    border-radius: 8px;
+    padding: 2px 6px;
+    background: var(--card, #ffffff);
+}
+.subgroup-row .subgroup-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted, #5f6b76);
+    text-align: center;
+    border-bottom: 1px dotted var(--border, #cdd6dc);
 }
 table.timetable tr:hover td { background: var(--blue-soft); }
 table.timetable tr:hover td.time-cell { background: var(--green-soft); }
@@ -301,4 +330,686 @@ table.timetable tr:hover td.time-cell { background: var(--green-soft); }
     font-weight: 700;
     font-size: 18px;
 }
+.range-pill {
+    background: var(--blue-soft);
+    color: var(--blue-dark);
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* ---------- Day-by-day notes ---------- */
+.notes-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+.note-chip {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    border: 1px solid var(--green);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ---------- Date columns ---------- */
+table.timetable th .day-date {
+    font-weight: 400;
+    font-size: 12px;
+    opacity: 0.9;
+}
+table.timetable th.today-col {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+}
+table.timetable th.corner {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 120px;
+}
+table.timetable td.time-cell {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
+
+/* ---------- One table for the whole term: 7 day columns per week, each headed
+       by its short day name plus that day\\'s own date (no week date ranges) */
+.semester-wrap {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+table.timetable.semester {
+    table-layout: fixed;
+    width: 100%;
+    background: var(--white);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+}
+table.timetable.semester th.semester-corner {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+}
+table.timetable.semester tbody th.time-cell {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+/* Day header: short day name on top, that day\\'s own date in a coloured
+   badge below \u2014 one colour per weekday so every column is instantly readable */
+table.timetable th.day-head { padding: 5px 2px 4px; background: #ffffff; }
+table.timetable th.day-head .dname {
+    display: block;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: .2px;
+}
+table.timetable th.day-head .dshow {
+    display: block;
+    margin: 3px auto 0;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.1;
+    padding: 2px 6px;
+    border-radius: 9px;
+    background: #eef2f6;
+    color: #33475b;
+    white-space: nowrap;
+}
+table.timetable th.day-head.wd-0 .dname { color: #1565c0; }
+table.timetable th.day-head.wd-0 .dshow { background: #e3f2fd; color: #0d47a1; }
+table.timetable th.day-head.wd-1 .dname { color: #6a1b9a; }
+table.timetable th.day-head.wd-1 .dshow { background: #f3e5f5; color: #4a148c; }
+table.timetable th.day-head.wd-2 .dname { color: #c62828; }
+table.timetable th.day-head.wd-2 .dshow { background: #ffebee; color: #b71c1c; }
+table.timetable th.day-head.wd-3 .dname { color: #ef6c00; }
+table.timetable th.day-head.wd-3 .dshow { background: #fff3e0; color: #e65100; }
+table.timetable th.day-head.wd-4 .dname { color: #00838f; }
+table.timetable th.day-head.wd-4 .dshow { background: #e0f7fa; color: #006064; }
+table.timetable th.day-head.wd-5 .dname { color: #4527a0; }
+table.timetable th.day-head.wd-5 .dshow { background: #ede7f6; color: #311b92; }
+table.timetable th.day-head.wd-6 .dname { color: #455a64; }
+table.timetable th.day-head.wd-6 .dshow { background: #eceff1; color: #263238; }
+table.timetable th.day-head.today-head .dname { color: #b71c1c; }
+table.timetable th.day-head.today-head .dshow {
+    background: #ffc247;
+    color: #4e2a00;
+    box-shadow: 0 0 0 2px #ff8f00;
+}
+table.timetable th.day-head.today-head {
+    background: linear-gradient(135deg, #ffd97d 0%, #ffc247 100%);
+}
+table.timetable.semester th.day-head.current-week {
+    background: #fff8e1;
+    box-shadow: inset 0 3px 0 var(--accent);
+}
+table.timetable th.day-head.weekend-head { background: #f2f6fa; }
+table.timetable th.day-head.weekend-head.current-week { background: #fff3d6; }
+/* Compact vertically (minimum up/down scrolling) with wider cells so the
+   horizontal scroll stays the normal reading direction */
+table.timetable.semester th.semester-corner { padding: 3px 4px; }
+table.timetable.semester th.semester-corner .corner-label { font-size: 12px; }
+table.timetable.semester th.semester-corner .corner-dates { font-size: 9px; }
+table.timetable.semester th.day-head { padding: 3px 2px; }
+table.timetable.semester th.day-head .dname { font-size: 14px; }
+table.timetable.semester th.day-head .dshow { font-size: 11px; margin-top: 2px; padding: 1px 5px; }
+table.timetable.semester th.time-cell {
+    font-size: 10px;
+    min-width: 50px;
+    width: 50px;
+    padding: 2px 2px;
+    white-space: normal;
+    line-height: 1.05;
+}
+table.timetable.semester th.time-cell .t-start,
+table.timetable.semester th.time-cell .t-end {
+    display: block;
+    white-space: nowrap;
+}
+table.timetable.semester th.time-cell .t-end { color: #7c8ea1; font-weight: 400; }
+table.timetable.semester th.time-cell .break { font-size: 8px; }
+table.timetable.semester td.slot-cell {
+    height: 44px;
+    padding: 3px 4px;
+    border-bottom: 2px solid #d5dde6;
+    border-right: 1px solid #eef2f6;
+}
+table.timetable.semester tbody tr:last-child td.slot-cell { border-bottom: none; }
+table.timetable.semester td.slot-cell .class-item {
+    font-size: 10.5px;
+    padding: 3px 5px;
+    margin-bottom: 2px;
+}
+table.timetable.semester td.slot-cell .class-time { font-size: 9px; }
+table.timetable.semester td.slot-cell .class-item .discipline .type { font-size: 8.5px; padding: 1px 4px; }
+table.timetable.semester td.slot-cell .class-item .meta { font-size: 9.5px; }
+table.timetable.semester td.slot-cell .subgroup-label { font-size: 8.5px; }
+table.timetable th.day-head.week-start,
+table.timetable.semester td.slot-cell.week-start { border-left: 2px solid var(--green); }
+
+/* ---------- Days × Time grid: days across (columns), time down (rows) ---- */
+table.timetable.grid-table {
+    table-layout: fixed;
+    width: 100%;
+    background: var(--white);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+table.timetable th.day-head {
+    padding: 6px 4px;
+    text-align: center;
+    border-bottom: 2px solid var(--green);
+}
+table.timetable th.day-head .dname {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+}
+table.timetable th.day-head .dshow {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: #5b6b7c;
+}
+table.timetable th.day-head.today-head {
+    background: linear-gradient(135deg, #ffd97d 0%, #ffc247 100%);
+}
+table.timetable th.time-cell {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    min-width: 88px;
+    width: 88px;
+    border-right: 2px solid var(--green);
+}
+table.timetable th.time-cell .break {
+    display: block;
+    font-size: 9px;
+    font-weight: 400;
+    color: #8a6d3b;
+}
+table.timetable td.slot-cell {
+    padding: 5px 6px;
+    vertical-align: top;
+    height: 66px;
+    border-bottom: 1px solid #eef2f6;
+}
+table.timetable td.slot-cell.slot-empty { background: #fbfcfd; }
+table.timetable td.slot-cell.weekend { background: #f2f6fa; }
+table.timetable td.slot-cell.weekend.slot-empty { background: #f7f9fc; }
+table.timetable td.slot-cell.today-cell {
+    background: #fff8e1;
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+table.timetable td.slot-cell .class-time { font-size: 10px; }
+table.timetable td.slot-cell .class-item { font-size: 11px; padding: 4px 6px; }
+table.timetable td.slot-cell .class-item .discipline .type { font-size: 9px; padding: 1px 5px; }
+table.timetable td.slot-cell .class-item .meta { font-size: 10px; }
+table.timetable td.slot-cell .subgroup-label { font-size: 9px; }
+
+/* ---------- Landscape transpose: days in rows, weeks in columns ----------
+   The whole semester is one short, wide sheet instead of a tall column. */
+.transpose-wrap {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+table.timetable.transpose {
+    table-layout: fixed;
+    width: 100%;
+}
+table.timetable.transpose th.week-head {
+    padding: 7px 4px;
+    font-size: 11px;
+    vertical-align: bottom;
+}
+table.timetable.transpose th.week-head .wnum {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green-dark);
+}
+table.timetable.transpose th.week-head .wlabel {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: #5b6b7c;
+    white-space: nowrap;
+}
+table.timetable.transpose th.transpose-corner,
+table.timetable.transpose th.dayname {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 92px;
+    width: 92px;
+    background: var(--green-soft);
+    color: var(--green-dark);
+    font-size: 15px;
+    text-align: center;
+    border-right: 2px solid var(--green);
+}
+table.timetable.transpose th.transpose-corner {
+    z-index: 4;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+    color: #fff;
+    font-size: 12px;
+}
+table.timetable.transpose th.dayname.weekend-head {
+    background: linear-gradient(135deg, #9db2c6 0%, #7d93ab 100%);
+    color: #fff;
+}
+table.timetable.transpose td.transpose-cell {
+    padding: 6px 7px;
+    height: 120px;
+    vertical-align: top;
+}
+table.timetable.transpose td.transpose-cell.today-cell {
+    background: #fff8e1;
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+table.timetable.transpose td.transpose-cell .class-time {
+    font-size: 10px;
+}
+table.timetable.transpose td.transpose-cell .class-item {
+    font-size: 11px;
+    padding: 4px 6px;
+}
+table.timetable.transpose td.transpose-cell .class-item .discipline .type {
+    font-size: 9px;
+    padding: 1px 5px;
+}
+table.timetable.transpose td.transpose-cell .class-item .meta { font-size: 10px; }
+table.timetable.transpose td.transpose-cell .subgroup-label { font-size: 9px; }
+
+/* ---------- Week-block layout: N blocks per row (explicit, not guessed) ---------- */
+/* ---------- Week blocks: one row running to the right (default) --------- */
+.weeks-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 14px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 12px;
+}
+.weeks-strip .grid-table {
+    flex: 0 0 auto;
+    width: 800px;
+}
+.weeks-strip .grid-table .time-cell { position: sticky; left: 0; z-index: 2; }
+
+.weeks-row {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+    margin-bottom: 14px;
+}
+.weeks-row.per-1 { grid-template-columns: minmax(0, 1fr); }
+.weeks-row.per-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.weeks-row.per-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.weeks-row.per-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* view switch */
+.view-switch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.view-switch .vs-label { font-size: 12px; color: var(--muted); }
+.btn.tiny { padding: 5px 10px; font-size: 12px; }
+.btn.active {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green-dark);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+/* ---------- Week calendar (legacy single-column wrapper) ---------- */
+.weeks-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-start;
+    width: 100%;
+}
+table.timetable.week-table {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 0;
+    /* each week is its own block; blocks wrap onto the same row, so the
+       semester reads across the screen (landscape) instead of downwards */
+    flex: 1 1 600px;
+    background: var(--white);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+table.timetable.week-table th {
+    text-align: center;
+    font-size: 13px;
+    padding: 10px 6px;
+}
+table.timetable.week-table th.weekend-head {
+    background: linear-gradient(135deg, #9db2c6 0%, #7d93ab 100%);
+}
+table.timetable.week-table th.corner {
+    position: static;
+    min-width: 92px;
+    width: 92px;
+    display: table-cell;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+}
+table.timetable.week-table th.corner .corner-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+}
+table.timetable.week-table th.corner .corner-dates {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.95;
+    white-space: nowrap;
+}
+table.timetable.week-table td.day-cell {
+    padding: 8px 10px;
+    height: 132px;
+    min-width: 0;
+}
+table.timetable.week-table td.day-cell .day-date {
+    font-weight: 700;
+    color: var(--blue-dark);
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+table.timetable.week-table td.day-cell.weekend {
+    background: #f7f9fc;
+}
+table.timetable.week-table td.day-cell.today-col {
+    background: radial-gradient(circle at top left, rgba(61,166,108,0.14) 0%, rgba(255,255,255,1) 70%);
+    box-shadow: inset 0 0 0 2px var(--green);
+    border-radius: 10px;
+}
+table.timetable.week-table td.day-cell .empty-day {
+    color: #c7cfd8;
+}
+table.timetable.week-table .class-block {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px dotted var(--border);
+}
+table.timetable.week-table .class-block:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+table.timetable.week-table .class-time {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--green-dark);
+    margin-bottom: 3px;
+    white-space: nowrap;
+}
+table.timetable.week-table .class-time .break {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+table.timetable.week-table .class-item {
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+table.timetable.week-table .class-item .discipline {
+    margin-bottom: 0;
+}
+table.timetable.week-table .class-item .discipline .type {
+    font-size: 9px;
+    padding: 1px 6px;
+    margin-left: 4px;
+}
+table.timetable.week-table .class-item .meta {
+    font-size: 10px;
+    margin-top: 1px;
+    line-height: 1.3;
+}
+table.timetable.week-table .subgroup-label {
+    font-size: 9px;
+}
+
+/* wide-screen tiers: each day column grows with the viewport, so the grid
+   reads like a normal wall calendar instead of a squeezed table */
+@media (min-width: 1400px) {
+    .weeks-row { gap: 16px; }
+    .weeks-strip { gap: 16px; }
+    .weeks-strip .grid-table { width: 900px; }
+    table.timetable td.slot-cell { height: 74px; padding: 6px 8px; }
+    table.timetable td.slot-cell .class-item { font-size: 12px; padding: 5px 8px; }
+    table.timetable td.slot-cell .class-item .discipline .type { font-size: 10px; }
+    table.timetable td.slot-cell .class-item .meta { font-size: 11px; }
+    table.timetable td.slot-cell .class-time { font-size: 11px; }
+    table.timetable th.time-cell { font-size: 12px; min-width: 96px; width: 96px; }
+    table.timetable th.day-head .dname { font-size: 15px; }
+    table.timetable.transpose td.transpose-cell { height: 132px; padding: 7px 9px; }
+    table.timetable.transpose td.transpose-cell .class-item { font-size: 12px; padding: 5px 8px; }
+    table.timetable.transpose td.transpose-cell .class-item .discipline .type { font-size: 10px; }
+    table.timetable.transpose td.transpose-cell .class-item .meta { font-size: 11px; }
+    table.timetable.transpose td.transpose-cell .class-time { font-size: 11px; }
+    table.timetable.week-table td.day-cell { padding: 9px 12px; height: 146px; }
+    table.timetable.week-table td.day-cell .day-date { font-size: 13px; }
+    table.timetable.week-table .class-item { font-size: 12px; padding: 5px 9px; }
+    table.timetable.week-table .class-item .discipline .type { font-size: 10px; }
+    table.timetable.week-table .class-item .meta { font-size: 11px; }
+    table.timetable.week-table .class-time { font-size: 11px; }
+    table.timetable.week-table .subgroup-label { font-size: 10px; }
+}
+@media (min-width: 1900px) {
+    .weeks-row { gap: 18px; }
+    .weeks-strip { gap: 18px; }
+    .weeks-strip .grid-table { width: 1000px; }
+    table.timetable td.slot-cell { height: 86px; padding: 8px 10px; }
+    table.timetable td.slot-cell .class-item { font-size: 13px; padding: 6px 9px; }
+    table.timetable td.slot-cell .class-item .discipline .type { font-size: 11px; }
+    table.timetable td.slot-cell .class-item .meta { font-size: 12px; }
+    table.timetable td.slot-cell .class-time { font-size: 12px; }
+    table.timetable th.time-cell { font-size: 13px; min-width: 108px; width: 108px; }
+    table.timetable th.day-head .dname { font-size: 16px; }
+    table.timetable th.day-head .dshow { font-size: 11px; }
+    table.timetable.transpose td.transpose-cell { height: 148px; }
+    table.timetable.transpose td.transpose-cell .class-item { font-size: 13px; padding: 6px 9px; }
+    table.timetable.transpose td.transpose-cell .class-item .discipline .type { font-size: 11px; }
+    table.timetable.transpose td.transpose-cell .class-item .meta { font-size: 12px; }
+    table.timetable.transpose td.transpose-cell .class-time { font-size: 12px; }
+    table.timetable.week-table td.day-cell { padding: 12px 14px; height: 160px; }
+    table.timetable.week-table td.day-cell .day-date { font-size: 14px; margin-bottom: 6px; }
+    table.timetable.week-table .class-item { font-size: 13px; padding: 7px 11px; margin-bottom: 6px; }
+    table.timetable.week-table .class-item .discipline { font-size: 13px; }
+    table.timetable.week-table .class-item .discipline .type { font-size: 11px; padding: 2px 7px; }
+    table.timetable.week-table .class-item .meta { font-size: 12px; }
+    table.timetable.week-table .class-time { font-size: 12px; }
+    table.timetable.week-table .subgroup-label { font-size: 11px; }
+    table.timetable.week-table th.corner { min-width: 110px; width: 110px; }
+    .schedule-header h2 { font-size: 30px; }
+}
+
+/* ---------- Print: landscape sheet ---------- */
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 8mm;
+    }
+    body { background: #fff; }
+    .topbar { padding: 6px 14px; box-shadow: none; }
+    .topbar h1 { font-size: 15px; }
+    .container { max-width: none; padding: 0; }
+    .weeks-row { gap: 6px; }
+    .weeks-strip {
+        flex-wrap: wrap;
+        overflow-x: visible;
+        gap: 6px;
+    }
+    .weeks-strip .grid-table { width: 100%; }
+    .transpose-wrap { overflow-x: visible; }
+    .semester-wrap { overflow-x: visible; }
+    table.timetable.semester { min-width: 0 !important; box-shadow: none; font-size: 7px; }
+    table.timetable.semester th.day-head .dname { font-size: 9px; }
+    table.timetable.semester th.day-head .dshow { font-size: 7px; }
+    table.timetable.semester td.slot-cell { height: 40px; padding: 2px; }
+    table.timetable.transpose { min-width: 0 !important; font-size: 8px; }
+    table.timetable.transpose td.transpose-cell { height: 64px; padding: 3px; }
+    table.timetable.grid-table { box-shadow: none; break-inside: avoid; }
+    table.timetable td.slot-cell { height: 46px; padding: 2px; }
+    table.timetable.transpose th.dayname,
+    table.timetable.transpose th.transpose-corner { min-width: 46px; width: 46px; font-size: 10px; }
+    table.timetable.week-table {
+        box-shadow: none;
+        break-inside: avoid;
+    }
+    table.timetable.week-table td.day-cell { height: 90px; }
+    .orphans-box, .notes-box { break-inside: avoid; }
+    .btn { display: none; }
+}
+
+/* ---------- Admin: ICS export + groups table ---------- */
+.badge-text {
+    color: var(--muted);
+    font-size: 14px;
+}
+.ics-export-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.ics-export-row select {
+    flex: 1 1 280px;
+    min-width: 220px;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    background: var(--white);
+    color: var(--text);
+}
+.ics-export-row select:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15);
+}
+.groups-table-wrap {
+    max-height: 460px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+table.groups-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+table.groups-table th {
+    position: sticky;
+    top: 0;
+    background: var(--blue-soft);
+    color: var(--blue-dark);
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 700;
+    border-bottom: 2px solid var(--border);
+    z-index: 1;
+}
+table.groups-table th.num,
+table.groups-table td.num { text-align: center; }
+table.groups-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+table.groups-table tr:nth-child(even) td { background: #fafcff; }
+table.groups-table tr:hover td { background: var(--blue-soft); }
+table.groups-table td.g-name {
+    font-weight: 700;
+    color: var(--blue-dark);
+    white-space: nowrap;
+}
+table.groups-table td form { margin: 0; }
+table.groups-table .btn.small { padding: 6px 12px; font-size: 12px; }
+
+/* ---------- Classes without dates ---------- */
+.orphans-box {
+    margin-top: 28px;
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    border-left: 4px solid var(--muted);
+}
+.orphans-box h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: var(--muted);
+}
+.orphans-box table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.orphans-box td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.orphans-box td.o-day { width: 110px; font-weight: 600; color: var(--blue-dark); }
+.orphans-box td.o-time { width: 100px; color: var(--green-dark); font-weight: 600; white-space: nowrap; }
 </style>
+
+/* Narrow windows keep only the start time so the day columns stay wide */
+@media (max-width: 1500px) {
+    table.timetable.semester th.time-cell .t-end { display: none; }
+}
+
+/* ---------- Mobile: the time column disappears (every class card already
+       shows its own time) and the wide strip stays scrollable with comfortable
+       day columns */
+@media (max-width: 760px) {
+    .container { padding: 8px 6px; }
+    .schedule-header { flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .group-pill, .range-pill { font-size: 13px; }
+    .semester-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        padding-bottom: 6px;
+    }
+    table.timetable.semester { min-width: var(--sem-min-mobile, 900px) !important; }
+    table.timetable.semester th.semester-corner { display: none; }
+    table.timetable.semester th.time-cell {
+        min-width: 40px;
+        width: 40px;
+        font-size: 9.5px;
+        padding: 2px 1px;
+    }
+    table.timetable.semester th.time-cell .t-end { display: none; }
+    table.timetable.semester th.day-head { padding: 3px 2px; }
+    table.timetable.semester th.day-head .dname { font-size: 15px; }
+    table.timetable.semester th.day-head .dshow { font-size: 12px; padding: 1px 5px; }
+    table.timetable.semester td.slot-cell { height: 54px; padding: 4px 5px; }
+    table.timetable.semester td.slot-cell .class-item { font-size: 12px; padding: 4px 6px; }
+    table.timetable.semester td.slot-cell .class-item .discipline .type { font-size: 10px; }
+    table.timetable.semester td.slot-cell .class-item .meta { font-size: 11px; }
+    table.timetable.semester td.slot-cell .class-time {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--green-dark);
+    }
+    .orphans-box table { font-size: 12px; }
+}
+

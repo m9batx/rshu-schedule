@@ -24,7 +24,44 @@ def init_db():
                 uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS classes (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_name      TEXT NOT NULL,
+                day             TEXT NOT NULL,
+                time_slot       TEXT NOT NULL,
+                break           TEXT NOT NULL DEFAULT '',
+                discipline      TEXT NOT NULL DEFAULT '',
+                type            TEXT NOT NULL DEFAULT '',
+                instructor      TEXT NOT NULL DEFAULT '',
+                instructor_key  TEXT NOT NULL DEFAULT '',
+                location        TEXT NOT NULL DEFAULT '',
+                dates           TEXT NOT NULL DEFAULT '[]'
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_instructor ON classes(instructor_key)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_group ON classes(group_name)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_day ON classes(day)")
         conn.commit()
+
+
+def flatten_classes(group_name: str, schedule: dict):
+    rows = []
+    for day, day_data in (schedule or {}).items():
+        for ts, slot in day_data.get("time_slots", {}).items():
+            for cls in slot.get("classes", []):
+                instructor = cls.get("instructor", "")
+                rows.append((
+                    group_name, day, ts,
+                    slot.get("break", ""),
+                    cls.get("discipline", ""),
+                    cls.get("type", ""),
+                    instructor,
+                    instructor.lower().strip(),
+                    cls.get("location", ""),
+                    json.dumps(cls.get("dates", []), ensure_ascii=False),
+                ))
+    return rows
 
 
 def import_folder(folder: str):
@@ -45,6 +82,15 @@ def import_folder(folder: str):
                     "VALUES (?, ?, ?)",
                     (group, json.dumps(schedule, ensure_ascii=False), name)
                 )
+                conn.execute("DELETE FROM classes WHERE group_name = ?", (group,))
+                class_rows = flatten_classes(group, schedule)
+                if class_rows:
+                    conn.executemany(
+                        "INSERT INTO classes (group_name, day, time_slot, break, "
+                        "discipline, type, instructor, instructor_key, location, dates) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        class_rows
+                    )
                 conn.commit()
                 print(f"OK ({group})")
                 ok += 1

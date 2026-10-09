@@ -1,0 +1,4 @@
+# fix extractor to apply geometric split in table extraction
+# patch idea: when processing a cell in a table row, if it has a vertical divider,
+# split the cell text into left/right based on geometry and create two streams
+pass

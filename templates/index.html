@@ -1,44 +1,53 @@
 {% extends "base.html" %}
-{% block title %}Choose your group{% endblock %}
+{% block title %}Choose group or instructor{% endblock %}
 {% block content %}
 
 <div class="card">
-    <h2>🎓 Choose your group</h2>
+    <h2>🎓 Group timetable</h2>
     <p style="color: var(--muted); margin-top: 0;">
-        Pick your group below. Optionally check <b>"Remember my choice"</b> so next time you'll see your timetable right
-        away.
+        Pick your group and open its timetable.
     </p>
 
-    <form method="get" action="{{ url_for('schedule') }}" id="groupForm">
-        <div class="group-grid">
+    <form method="get" action="{{ url_for('schedule') }}">
+        <label for="group">Group</label>
+        <select name="group" id="group" required>
+            <option value="">— select a group —</option>
             {% for g in groups %}
-            <a href="#" class="group-btn" data-group="{{ g }}" onclick="pickGroup(event, '{{ g }}')">
-                {{ g }}
-            </a>
+            <option value="{{ g }}">{{ g }}</option>
             {% endfor %}
-        </div>
-
-        <input type="hidden" name="group" id="selectedGroup">
-        <input type="hidden" name="remember" id="rememberFlag" value="0">
+        </select>
 
         <div class="checkbox-row">
-            <input type="checkbox" id="remember"
-                onchange="document.getElementById('rememberFlag').value = this.checked ? '1' : '0'">
-            <label for="remember" style="margin: 0;">Remember my choice (auto‑open my timetable next time)</label>
+            <input type="checkbox" id="remember" name="remember" value="1">
+            <label for="remember" style="margin: 0;">
+                Remember my choice (auto‑open my timetable next time)
+            </label>
         </div>
 
+        <button type="submit" class="btn green">Show timetable</button>
         {% if not groups %}
         <div class="alert error">No schedules uploaded yet. Please ask the admin.</div>
         {% endif %}
     </form>
 </div>
 
-<script>
-    function pickGroup(e, g) {
-        e.preventDefault();
-        document.getElementById('selectedGroup').value = g;
-        document.getElementById('groupForm').submit();
-    }
-</script>
+<div class="card green">
+    <h2>👩‍🏫 Instructor timetable</h2>
+    <p style="color: var(--muted); margin-top: 0;">
+        Pick an instructor and see every class they teach.
+    </p>
+
+    <form method="get" action="{{ url_for('instructor_search') }}">
+        <label for="q">Instructor</label>
+        <select name="q" id="q" required>
+            <option value="">— select an instructor —</option>
+            {% for i in instructors %}
+            <option value="{{ i }}">{{ i }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <button type="submit" class="btn green">Show timetable</button>
+    </form>
+</div>
 
 {% endblock %}

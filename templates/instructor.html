@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Search by Instructor{% endblock %}
+{% block content %}
+
+<div class="schedule-header">
+    <h2>🔍 Search by instructor</h2>
+</div>
+
+<div class="card">
+    <form method="get" action="{{ url_for('instructor_search') }}">
+        <label for="q">Instructor name</label>
+        <input type="text" id="q" name="q" value="{{ q }}"
+               placeholder="e.g. Иванов" autocomplete="off">
+        <br><br>
+        <button type="submit" class="btn green">Search</button>
+    </form>
+</div>
+
+{% if q %}
+    <div class="card">
+        <h2>{{ results|length }} class(es)</h2>
+        <p style="color: var(--muted); margin-top: 0;">
+            Search: <b>{{ q }}</b>
+        </p>
+
+        {% if results %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Time</th>
+                        <th>Break</th>
+                        <th>Discipline</th>
+                        <th>Type</th>
+                        <th>Group</th>
+                        <th>Location</th>
+                        <th>Dates</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in results %}
+                    <tr>
+                        <td>{{ day_labels.get(r.day, r.day) }}</td>
+                        <td>{{ r.time_slot }}</td>
+                        <td>{{ r.break }}</td>
+                        <td>{{ r.discipline }}</td>
+                        <td>{{ r.type }}</td>
+                        <td>{{ r.group_name }}</td>
+                        <td>{% if r.location and (r.location.startswith('http') or r.location.startswith('www.')) %}<a href="{{ r.location }}" target="_blank" rel="noopener">{{ r.location }}</a>{% else %}{{ r.location }}{% endif %}</td>
+                        <td>{{ r.dates }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No classes found for <b>{{ q }}</b>.</p>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% endblock %}

@@ -1,58 +1,56 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m %}
 {% block title %}{{ group }} – Timetable{% endblock %}
 {% block content %}
 
 <div class="schedule-header">
-    <h2>Weekly Timetable</h2>
     <span class="group-pill">{{ group }}</span>
+    {% if cal.dates %}
+    <span class="range-pill">📅 {{ cal.dates[0] }} — {{ cal.dates[-1] }}</span>
+    {% endif %}
     <a href="{{ url_for('forget') }}" class="btn ghost small">↩ Change group</a>
 </div>
 
-<div class="timetable-wrap">
-    <table class="timetable">
+{% if cal.notes %}
+<div class="notes-box">
+    {% for day_en, note in cal.notes %}
+    <span class="note-chip">{{ day_labels.get(day_en, day_en) }}: {{ note }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if weeks %}
+{% if view == 'semester' %}
+{# ---- ONE table for the whole term: every week is just 7 day columns, each
+     headed by its short day name plus that day's own date -- #}
+<div class="semester-wrap">
+    <table class="timetable semester" style="min-width: {{ 88 + weeks|length * 7 * 200 }}px; --sem-min-mobile: {{ 48 + weeks|length * 7 * 136 }}px">
         <thead>
             <tr>
-                <th>Time</th>
-                {% for d in days %}
-                <th>{{ d.capitalize() }}</th>
+                <th class="corner semester-corner">
+                    <span class="corner-label">Время</span>
+                    <span class="corner-dates">неделя ↓</span>
+                </th>
+                {% for w in weeks %}
+                {% for d in w.days %}
+                <th class="day-head wd-{{ loop.index0 }} week-start {{ 'current-week' if w.is_current else '' }} {{ 'weekend-head' if loop.index0 >= 5 else '' }} {{ 'today-head' if d.today else '' }}">
+                    <span class="dname">{{ week_day_names[loop.index0] }}</span>
+                    <span class="dshow">{{ d.show }}</span>
+                </th>
+                {% endfor %}
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
-            {% if not times %}
+            {% for time in cal.times %}
+            {% set tparts = time.split('-') %}
             <tr>
-                <td colspan="7" class="empty-day">No scheduled time slots.</td>
-            </tr>
-            {% endif %}
-            {% for time in times %}
-            <tr>
-                <td class="time-cell">{{ time }}</td>
-                {% for d in days %}
-                {% set day_data = data.get(d, {}) %}
-                {% set slot = day_data.get('time_slots', {}).get(time) %}
-                <td>
-                    {% if day_data.get('note') %}
-                    <div class="note-day">{{ day_data['note'] }}</div>
-                    {% elif slot and slot.classes %}
-                    {% for c in slot.classes %}
-                    <div class="class-item">
-                        <div class="discipline">
-                            {{ c.discipline }}
-                            <span class="type">{{ c.type }}</span>
-                        </div>
-                        {% if c.instructor %}
-                        <div class="meta">👤 {{ c.instructor }}</div>
-                        {% endif %}
-                        {% if c.location %}
-                        <div class="meta">📍 {{ c.location }}</div>
-                        {% endif %}
-                        {% if c.dates %}
-                        <div class="dates">📅 {{ c.dates|join(', ') }}</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="empty-day">—</div>
+                <th class="time-cell"><span class="t-start">{{ tparts[0]|trim }}</span>{% if tparts|length > 1 %}<span class="t-end">{{ tparts[1]|trim }}</span>{% endif %}{% if cal.breaks.get(time) %}<span class="break">☕ {{ cal.breaks[time] }}</span>{% endif %}</th>
+                {% for col in sem_cols %}
+                {% set d = col.day %}
+                <td class="slot-cell {{ 'week-start' if loop.index0 % 7 == 0 else '' }} {{ 'weekend' if loop.index0 % 7 >= 5 else '' }} {{ 'today-cell' if d.today else '' }} {{ 'slot-empty' if not d.classes.get(time) else '' }}">
+                    {% if d.classes.get(time) %}
+                        {{ m.slot_classes(d.classes[time], cal, time) }}
                     {% endif %}
                 </td>
                 {% endfor %}
@@ -61,5 +59,118 @@
         </tbody>
     </table>
 </div>
+<script>
+// On open, jump straight to today's day column (or the current week when the
+// group has no class today) instead of always starting at week 1.
+(function () {
+    var wrap = document.querySelector('.semester-wrap');
+    if (!wrap) { return; }
+    var target = wrap.querySelector('.day-head.today-head')
+              || wrap.querySelector('.day-head.current-week');
+    if (!target) { return; }
+    function jump() {
+        var w = wrap.getBoundingClientRect();
+        var t = target.getBoundingClientRect();
+        wrap.scrollLeft += (t.left - w.left) - (w.width / 2) + (t.width / 2);
+    }
+    requestAnimationFrame(jump);
+    window.addEventListener('load', jump);
+})();
+</script>
+{% elif view == 'transpose' %}
+<div class="transpose-wrap">
+    <table class="timetable transpose" style="min-width: {{ 92 + weeks|length * 148 }}px">
+        <thead>
+            <tr>
+                <th class="corner transpose-corner">
+                    <span class="corner-label">День</span>
+                    <span class="corner-dates">недели →</span>
+                </th>
+                {% for w in weeks %}
+                <th class="week-head {{ 'today-col' if w.is_current else '' }}">
+                    <span class="wnum">Н{{ w.num }}</span>
+                    <span class="wlabel">{{ w.label }}</span>
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in day_rows %}
+            <tr>
+                <th class="dayname {{ 'weekend-head' if row.idx >= 5 else '' }}">{{ row.name }}</th>
+                {% for d in row.cells %}
+                <td class="transpose-cell {{ 'weekend' if row.idx >= 5 else '' }} {{ 'today-cell' if d.today else '' }}">
+                    {{ m.day_classes(d, cal) }}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+{# ---- Days across (columns), time down (rows), weeks running to the right -- #}
+{% for row in week_rows %}
+<div class="{{ 'weeks-strip' if strip else 'weeks-row per-' ~ row|length }}">
+    {% for w in row %}
+    <table class="timetable grid-table">
+        <thead>
+            <tr>
+                <th class="corner grid-corner">
+                    <span class="corner-label">Неделя</span>
+                    <span class="corner-dates">{{ w.label }}</span>
+                </th>
+                {% for d in w.days %}
+                <th class="day-head {{ 'weekend-head' if loop.index0 >= 5 else '' }} {{ 'today-head' if d.today else '' }}">
+                    <span class="dname">{{ week_day_names[loop.index0] }}</span>
+                    <span class="dshow">{{ d.show }}</span>
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for time in cal.times %}
+            <tr>
+                <th class="time-cell">{{ time }}{% if cal.breaks.get(time) %}<span class="break">☕ {{ cal.breaks[time] }}</span>{% endif %}</th>
+                {% for d in w.days %}
+                <td class="slot-cell {{ 'weekend' if loop.index0 >= 5 else '' }} {{ 'today-cell' if d.today else '' }} {{ 'slot-empty' if not d.classes.get(time) else '' }}">
+                    {% if d.classes.get(time) %}
+                        {{ m.slot_classes(d.classes[time], cal, time) }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+{% else %}
+<div class="card">
+    <div class="empty-day">No dated classes found for this group.</div>
+</div>
+{% endif %}
+
+{% if cal.orphans %}
+<div class="orphans-box">
+    <h3>⚠ Classes without dates</h3>
+    <table>
+        {% for day_en, t, c in cal.orphans %}
+        <tr>
+            <td class="o-day">{{ day_labels.get(day_en, day_en) }}</td>
+            <td class="o-time">{{ t }}</td>
+            <td>
+                {{ c.discipline }}
+                <span class="type">{{ c.type }}</span>
+                {% if c.instructor %} — {{ c.instructor }}{% endif %}
+                {% if c.location %}{% if c.location.startswith('http') %}<a href="{{ c.location }}" target="_blank" rel="noopener">{{ c.location }}</a>{% else %} · {{ c.location }}{% endif %}{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
 
 {% endblock %}
