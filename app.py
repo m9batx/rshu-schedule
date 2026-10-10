@@ -31,8 +31,10 @@ ADMIN_USER = "mohammedbekhit"
 ADMIN_PASSWORD_HASH = b"REDACTED_OLD_ADMIN_HASH"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-DB_PATH = os.path.join(BASE_DIR, "schedules.db")
+
+# Use /tmp because Vercel filesystem is read-only
+UPLOAD_DIR = "/tmp/uploads"
+DB_PATH = "/tmp/schedules.db"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # ==================== APP ====================
