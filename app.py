@@ -37,6 +37,13 @@ UPLOAD_DIR = "/tmp/uploads"
 DB_PATH = "/tmp/schedules.db"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Ensure DB exists in /tmp (Docker/Vercel may have fresh /tmp; we ship DB in image)
+if not os.path.exists(DB_PATH):
+    src_db = os.path.join(BASE_DIR, 'schedules.db')
+    if os.path.exists(src_db):
+        import shutil
+        shutil.copy2(src_db, DB_PATH)
+
 # ==================== APP ====================
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
