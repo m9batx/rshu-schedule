@@ -23,7 +23,7 @@
 {% if view == 'semester' %}
 {# ---- ONE table for the whole term: every week is just 7 day columns, each
      headed by its short day name plus that day's own date -- #}
-<div class="semester-wrap">
+<div class="semester-wrap desktop-only">
     <table class="timetable semester" style="min-width: {{ 88 + weeks|length * 7 * 200 }}px; --sem-min-mobile: {{ 48 + weeks|length * 7 * 136 }}px">
         <thead>
             <tr>
@@ -59,10 +59,43 @@
         </tbody>
     </table>
 </div>
+
+{# ---- Phone layout: every day stacks up/down so you scroll day by day ---- #}
+<div class="mobile-days">
+    {% for w in weeks %}
+    {% for d in w.days %}
+    {% set ns = namespace(has=false) %}
+    {% for time in cal.times %}{% if d.classes.get(time) %}{% set ns.has = true %}{% endif %}{% endfor %}
+    {% if ns.has %}
+    <div class="mday {{ 'mday-today' if d.today else '' }}">
+        <div class="mday-head wd-{{ loop.index0 }}">
+            <span class="dname">{{ week_day_names[loop.index0] }}</span>
+            <span class="dshow">{{ d.show }}</span>
+        </div>
+        <div class="mday-body">
+            {% for time in cal.times if d.classes.get(time) %}
+                {{ m.slot_classes(d.classes[time], cal, time) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
+</div>
+
 <script>
 // On open, jump straight to today's day column (or the current week when the
 // group has no class today) instead of always starting at week 1.
 (function () {
+    if (window.matchMedia('(max-width: 760px)').matches) {
+        var m = document.querySelector('.mday-today') || document.querySelector('.mday');
+        if (m) {
+            requestAnimationFrame(function () {
+                m.scrollIntoView({ behavior: 'auto', block: 'start' });
+            });
+        }
+        return;
+    }
     var wrap = document.querySelector('.semester-wrap');
     if (!wrap) { return; }
     var target = wrap.querySelector('.day-head.today-head')

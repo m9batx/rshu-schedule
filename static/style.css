@@ -22,6 +22,29 @@ body {
     color: var(--text);
 }
 
+/* ---------- Site header: minimal, big green title ---------- */
+.site-header {
+    text-align: center;
+    padding: 48px 16px 30px;
+    background: linear-gradient(180deg, var(--green-soft) 0%, rgba(255, 255, 255, 0) 100%);
+}
+.site-title {
+    margin: 0;
+    color: var(--green);
+    font-size: clamp(38px, 8vw, 104px);
+    font-weight: 800;
+    letter-spacing: 1px;
+    line-height: 1.02;
+    text-shadow: 0 2px 0 rgba(255, 255, 255, 0.6);
+}
+.site-credit {
+    margin: 12px 0 0;
+    font-size: clamp(12px, 1.4vw, 17px);
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.4px;
+}
+
 /* ---------- Container ---------- */
 .container {
     width: 100%;
@@ -29,6 +52,44 @@ body {
     margin: 0 auto;
     padding: 24px 16px 56px;
 }
+
+/* ---------- Phone day-by-day stack (hidden on desktop) ---------- */
+.mobile-days { display: none; }
+.mday {
+    background: var(--white);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.mday-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 2px solid var(--green);
+}
+.mday-head .dname { font-size: 20px; font-weight: 800; color: var(--blue); }
+.mday-head .dshow {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 9px;
+    background: #eef2f6;
+    color: #33475b;
+}
+.mday-head.wd-0 .dname { color: #1565c0; } .mday-head.wd-0 .dshow { background: #e3f2fd; color: #0d47a1; }
+.mday-head.wd-1 .dname { color: #6a1b9a; } .mday-head.wd-1 .dshow { background: #f3e5f5; color: #4a148c; }
+.mday-head.wd-2 .dname { color: #c62828; } .mday-head.wd-2 .dshow { background: #ffebee; color: #b71c1c; }
+.mday-head.wd-3 .dname { color: #ef6c00; } .mday-head.wd-3 .dshow { background: #fff3e0; color: #e65100; }
+.mday-head.wd-4 .dname { color: #00838f; } .mday-head.wd-4 .dshow { background: #e0f7fa; color: #006064; }
+.mday-head.wd-5 .dname { color: #4527a0; } .mday-head.wd-5 .dshow { background: #ede7f6; color: #311b92; }
+.mday-head.wd-6 .dname { color: #455a64; } .mday-head.wd-6 .dshow { background: #eceff1; color: #263238; }
+.mday.mday-today { box-shadow: 0 0 0 3px #ffc247, var(--shadow); }
+.mday.mday-today .mday-head { background: linear-gradient(135deg, #ffd97d 0%, #ffc247 100%); }
+.mday-body { padding: 10px 12px; }
+.mday-body .class-block { margin-bottom: 12px; }
+.mday-body .class-block:last-child { margin-bottom: 0; }
 
 /* ---------- Top bar ---------- */
 .topbar {
@@ -969,7 +1030,6 @@ table.groups-table .btn.small { padding: 6px 12px; font-size: 12px; }
 .orphans-box td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
 .orphans-box td.o-day { width: 110px; font-weight: 600; color: var(--blue-dark); }
 .orphans-box td.o-time { width: 100px; color: var(--green-dark); font-weight: 600; white-space: nowrap; }
-</style>
 
 /* Narrow windows keep only the start time so the day columns stay wide */
 @media (max-width: 1500px) {
@@ -980,7 +1040,10 @@ table.groups-table .btn.small { padding: 6px 12px; font-size: 12px; }
        shows its own time) and the wide strip stays scrollable with comfortable
        day columns */
 @media (max-width: 760px) {
+    .site-header { padding: 26px 12px 16px; }
     .container { padding: 8px 6px; }
+    .desktop-only { display: none !important; }
+    .mobile-days { display: block; }
     .schedule-header { flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .group-pill, .range-pill { font-size: 13px; }
     .semester-wrap {
