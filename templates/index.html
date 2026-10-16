@@ -3,10 +3,8 @@
 {% block content %}
 
 <div class="card">
-    <h2>🎓 Group timetable</h2>
-    <p style="color: var(--muted); margin-top: 0;">
-        Pick your group and open its timetable.
-    </p>
+    <h2>Group timetable</h2>
+    <p class="card-sub">Pick your group and open its timetable.</p>
 
     <form method="get" action="{{ url_for('schedule') }}">
         <label for="group">Group</label>
@@ -31,11 +29,9 @@
     </form>
 </div>
 
-<div class="card green">
-    <h2>👩‍🏫 Instructor timetable</h2>
-    <p style="color: var(--muted); margin-top: 0;">
-        Pick an instructor and see every class they teach.
-    </p>
+<div class="card">
+    <h2>Instructor timetable</h2>
+    <p class="card-sub">Pick an instructor and see every class they teach.</p>
 
     <form method="get" action="{{ url_for('instructor_search') }}">
         <label for="q">Instructor</label>
