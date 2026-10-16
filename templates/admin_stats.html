@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="schedule-header">
-    <h2> Visitor statistics</h2>
+    <h2>Visitor statistics</h2>
     <a href="{{ url_for('admin_panel') }}" class="btn ghost small">← Back to panel</a>
     <form method="post" action="{{ url_for('admin_stats_clear') }}"
           onsubmit="return confirm('Delete all recorded visits?');" style="margin:0;">
