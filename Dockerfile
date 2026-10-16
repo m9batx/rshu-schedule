@@ -12,10 +12,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 RUN useradd --create-home --uid 1001 appuser \
-    && mkdir -p /tmp/uploads \
-    && chown -R appuser:appuser /app /tmp/uploads
+    && mkdir -p /app/data \
+    && chown -R appuser:appuser /app /app/data
 
 USER appuser
+
+# Persistent data (schedules DB + uploaded PDFs) lives here.
+ENV DATA_DIR=/app/data
 
 EXPOSE 5000
 

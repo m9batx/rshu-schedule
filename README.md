@@ -15,6 +15,19 @@ Do **not** commit secrets. Set these in the environment / a local `.env` (git-ig
 | `SECRET_KEY` | Fixed Flask secret key (sessions/CSRF). Required in production and with multiple workers. |
 | `SESSION_COOKIE_SECURE` | `1` (default) sends the session cookie over HTTPS only; set `0` for plain-HTTP local dev. |
 | `WEB_CONCURRENCY` | gunicorn worker count (default `2`). |
+| `DATA_DIR` | Directory holding `schedules.db` + uploads. Defaults to the app dir; falls back to `/tmp` if read-only. |
+
+### Persistence
+
+The SQLite database (schedules, **visitor statistics**, login attempts) and uploaded PDFs are stored in `DATA_DIR` (default `/app/data` in Docker). Use a **mounted volume** for it, otherwise the data is lost on every restart/redeploy:
+
+```yaml
+volumes:
+  - appdata:/app/data   # named volume (survives restarts)
+  # or:  - ./data:/app/data
+```
+
+Without a host path or volume, `/tmp`-style ephemeral storage drops the visitor logs.
 
 ## Run with Docker
 

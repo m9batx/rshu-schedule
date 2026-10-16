@@ -42,17 +42,45 @@ if not ADMIN_PASSWORD_HASH:
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Use /tmp because Vercel filesystem is read-only
-UPLOAD_DIR = "/tmp/uploads"
-DB_PATH = "/tmp/schedules.db"
+
+def _is_writable(directory: str) -> bool:
+    try:
+        os.makedirs(directory, exist_ok=True)
+        probe = os.path.join(directory, ".write_test")
+        with open(probe, "w") as fh:
+            fh.write("ok")
+        os.remove(probe)
+        return True
+    except Exception:
+        return False
+
+
+# Persistent data directory: the SQLite DB (schedules, visits, login attempts)
+# and uploaded PDFs live here so they survive restarts/redeploys.
+#   - default: next to the app (use a mounted volume in Docker for persistence)
+#   - override with DATA_DIR / DB_PATH / UPLOAD_DIR
+#   - if the location is read-only (e.g. serverless/Vercel) fall back to /tmp
+DATA_DIR = os.environ.get("DATA_DIR") or BASE_DIR
+DB_PATH = os.environ.get("DB_PATH") or os.path.join(DATA_DIR, "schedules.db")
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR") or os.path.join(DATA_DIR, "uploads")
+
+if not _is_writable(os.path.dirname(DB_PATH) or "."):
+    log.warning("Data dir %r is not writable - falling back to /tmp", DATA_DIR)
+    DATA_DIR = "/tmp"
+    DB_PATH = "/tmp/schedules.db"
+    UPLOAD_DIR = "/tmp/uploads"
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Ensure DB exists in /tmp (Docker/Vercel may have fresh /tmp; we ship DB in image)
+# Bootstrap the DB from the file shipped in the repo on first run.
 if not os.path.exists(DB_PATH):
-    src_db = os.path.join(BASE_DIR, 'schedules.db')
-    if os.path.exists(src_db):
+    _src_db = os.path.join(BASE_DIR, "schedules.db")
+    if os.path.exists(_src_db) and os.path.abspath(_src_db) != os.path.abspath(DB_PATH):
         import shutil
-        shutil.copy2(src_db, DB_PATH)
+        shutil.copy2(_src_db, DB_PATH)
+        log.info("Initialised database from %s -> %s", _src_db, DB_PATH)
+
+log.info("Using database: %s", DB_PATH)
 
 # ==================== APP ====================
 app = Flask(__name__)

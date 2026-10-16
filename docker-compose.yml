@@ -13,6 +13,12 @@
       SECRET_KEY: ${SECRET_KEY:-}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-1}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      DATA_DIR: /app/data
     volumes:
-      - ./schedules.db:/app/schedules.db
+      # Named volume keeps the DB + uploads across restarts/redeploys.
+      # (or bind-mount a host folder:  - ./data:/app/data)
+      - appdata:/app/data
     restart: unless-stopped
+
+volumes:
+  appdata:
