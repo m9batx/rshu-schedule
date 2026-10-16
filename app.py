@@ -126,6 +126,19 @@ def init_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_instructor ON classes(instructor_key)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_group ON classes(group_name)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_classes_day ON classes(day)")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS visits (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts          TEXT NOT NULL,
+                ip          TEXT NOT NULL DEFAULT '',
+                browser     TEXT NOT NULL DEFAULT '',
+                os          TEXT NOT NULL DEFAULT '',
+                device      TEXT NOT NULL DEFAULT '',
+                user_agent  TEXT NOT NULL DEFAULT '',
+                path        TEXT NOT NULL DEFAULT ''
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_visits_ts ON visits(ts)")
         # Default settings if missing
         defaults = {
             "current_year": "26",     # reference year (2-digit)
@@ -303,6 +316,124 @@ def get_all_settings() -> dict:
 
 
 init_db()
+
+
+# ==================== VISITOR LOGGING ====================
+def parse_user_agent(ua: str):
+    """Very small User-Agent parser -> (browser, os, device)."""
+    low = (ua or "").lower()
+
+    if "windows nt 10" in low or "windows nt 11" in low:
+        os_name = "Windows 10/11"
+    elif "windows" in low:
+        os_name = "Windows"
+    elif "android" in low:
+        os_name = "Android"
+    elif "iphone" in low or "ipad" in low or "ipod" in low:
+        os_name = "iOS"
+    elif "mac os x" in low or "macintosh" in low:
+        os_name = "macOS"
+    elif "cros" in low:
+        os_name = "ChromeOS"
+    elif "linux" in low:
+        os_name = "Linux"
+    else:
+        os_name = "Unknown"
+
+    if "ipad" in low or "tablet" in low:
+        device = "Tablet"
+    elif "mobi" in low or "iphone" in low or "android" in low:
+        device = "Mobile"
+    else:
+        device = "Desktop"
+
+    if "edg" in low:
+        browser = "Edge"
+    elif "opr/" in low or "opera" in low:
+        browser = "Opera"
+    elif "firefox/" in low:
+        browser = "Firefox"
+    elif "chrome/" in low or "crios" in low:
+        browser = "Chrome"
+    elif "safari/" in low:
+        browser = "Safari"
+    elif "msie" in low or "trident" in low:
+        browser = "Internet Explorer"
+    else:
+        browser = "Other"
+
+    return browser, os_name, device
+
+
+def client_ip() -> str:
+    """Real client IP, honouring a front proxy's X-Forwarded-For."""
+    fwd = request.headers.get("X-Forwarded-For", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.remote_addr or ""
+
+
+@app.before_request
+def record_visit():
+    """Log one visit per session (browser + IP + OS) for public pages."""
+    if request.method != "GET":
+        return
+    path = request.path or ""
+    if path.startswith("/static") or path == "/favicon.ico":
+        return
+    if session.get("visit_logged"):
+        return
+    session["visit_logged"] = True
+
+    ua = request.headers.get("User-Agent", "")
+    browser, os_name, device = parse_user_agent(ua)
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(
+                "INSERT INTO visits (ts, ip, browser, os, device, user_agent, path) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    client_ip(), browser, os_name, device,
+                    ua[:400], path[:200],
+                ),
+            )
+            conn.commit()
+    except Exception:
+        log.exception("Failed to record visit")
+
+
+def visit_stats() -> dict:
+    """Aggregate numbers + recent rows for the admin statistics page."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        total = conn.execute("SELECT COUNT(*) FROM visits").fetchone()[0]
+        uniques = conn.execute("SELECT COUNT(DISTINCT ip) FROM visits").fetchone()[0]
+        today_count = conn.execute(
+            "SELECT COUNT(*) FROM visits WHERE ts LIKE ?", (today + "%",)
+        ).fetchone()[0]
+        by_browser = [dict(r) for r in conn.execute(
+            "SELECT browser, COUNT(*) AS c FROM visits GROUP BY browser ORDER BY c DESC"
+        ).fetchall()]
+        by_os = [dict(r) for r in conn.execute(
+            "SELECT os, COUNT(*) AS c FROM visits GROUP BY os ORDER BY c DESC"
+        ).fetchall()]
+        by_device = [dict(r) for r in conn.execute(
+            "SELECT device, COUNT(*) AS c FROM visits GROUP BY device ORDER BY c DESC"
+        ).fetchall()]
+        recent = [dict(r) for r in conn.execute(
+            "SELECT ts, ip, browser, os, device, path FROM visits ORDER BY id DESC LIMIT 300"
+        ).fetchall()]
+    return {
+        "total": total,
+        "uniques": uniques,
+        "today": today_count,
+        "by_browser": by_browser,
+        "by_os": by_os,
+        "by_device": by_device,
+        "recent": recent,
+    }
 
 
 # ==================== AUTH ====================
@@ -879,6 +1010,26 @@ def admin_cleanup_by_year():
     else:
         flash(f"No groups found with year {target:02d}.", "success")
     return redirect(url_for("admin_panel"))
+
+
+@app.route("/admin/stats")
+@admin_required
+def admin_stats():
+    return render_template(
+        "admin_stats.html",
+        stats=visit_stats(),
+        admin_user=ADMIN_USER,
+    )
+
+
+@app.route("/admin/stats/clear", methods=["POST"])
+@admin_required
+def admin_stats_clear():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM visits")
+        conn.commit()
+    flash("Visitor statistics cleared.", "success")
+    return redirect(url_for("admin_stats"))
 
 
 @app.route("/admin/logout")

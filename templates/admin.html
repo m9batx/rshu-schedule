@@ -5,6 +5,7 @@
 <div class="schedule-header">
     <h2>🛠 Admin Panel</h2>
     <span class="badge-text">signed in as <b>{{ admin_user }}</b></span>
+    <a href="{{ url_for('admin_stats') }}" class="btn ghost small">View statistics</a>
     <a href="{{ url_for('admin_logout') }}" class="btn danger small">Logout</a>
 </div>
 

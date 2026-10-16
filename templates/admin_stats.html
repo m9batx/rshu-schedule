@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Visitor statistics{% endblock %}
+{% block content %}
+
+<div class="schedule-header">
+    <h2> Visitor statistics</h2>
+    <a href="{{ url_for('admin_panel') }}" class="btn ghost small">← Back to panel</a>
+    <form method="post" action="{{ url_for('admin_stats_clear') }}"
+          onsubmit="return confirm('Delete all recorded visits?');" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn danger small">Clear statistics</button>
+    </form>
+</div>
+
+<div class="stat-grid">
+    <div class="stat">
+        <span class="stat-num">{{ stats.total }}</span>
+        <span class="stat-label">Total visits</span>
+    </div>
+    <div class="stat">
+        <span class="stat-num">{{ stats.uniques }}</span>
+        <span class="stat-label">Unique IPs</span>
+    </div>
+    <div class="stat">
+        <span class="stat-num">{{ stats.today }}</span>
+        <span class="stat-label">Visits today</span>
+    </div>
+</div>
+
+<div class="stats-cols">
+    <div class="card">
+        <h2>Browsers</h2>
+        <table class="mini-table">
+            <tbody>
+                {% for b in stats.by_browser %}
+                <tr><td>{{ b.browser or 'Unknown' }}</td><td class="num">{{ b.c }}</td></tr>
+                {% else %}
+                <tr><td colspan="2" class="empty-day">No data yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h2>Operating systems</h2>
+        <table class="mini-table">
+            <tbody>
+                {% for o in stats.by_os %}
+                <tr><td>{{ o.os or 'Unknown' }}</td><td class="num">{{ o.c }}</td></tr>
+                {% else %}
+                <tr><td colspan="2" class="empty-day">No data yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h2>Devices</h2>
+        <table class="mini-table">
+            <tbody>
+                {% for d in stats.by_device %}
+                <tr><td>{{ d.device or 'Unknown' }}</td><td class="num">{{ d.c }}</td></tr>
+                {% else %}
+                <tr><td colspan="2" class="empty-day">No data yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Recent visits</h2>
+    {% if stats.recent %}
+    <div class="groups-table-wrap">
+        <table class="groups-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>IP address</th>
+                    <th>Browser</th>
+                    <th>OS</th>
+                    <th>Device</th>
+                    <th>Page</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in stats.recent %}
+                <tr>
+                    <td>{{ v.ts }}</td>
+                    <td>{{ v.ip }}</td>
+                    <td>{{ v.browser }}</td>
+                    <td>{{ v.os }}</td>
+                    <td>{{ v.device }}</td>
+                    <td>{{ v.path }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--muted); font-style: italic;">No visits recorded yet.</p>
+    {% endif %}
+</div>
+
+{% endblock %}
